@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from .api import router
+from .core.mongodb import mongodb
 
 # Load environment variables from .env file
 load_dotenv()
@@ -43,3 +44,19 @@ app.include_router(router)
 async def root():
     """Root endpoint for health check"""
     return {"status": "ok", "message": "AI Chat Stack Backend is running"}
+
+
+@app.on_event("startup")
+async def startup():
+    """Execute code on application startup"""
+    logger.info("Connecting to MongoDB...")
+    await mongodb.connect()
+    logger.info("MongoDB connection established")
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    """Execute code on application shutdown"""
+    logger.info("Closing MongoDB connection...")
+    await mongodb.close()
+    logger.info("MongoDB connection closed")

@@ -35,6 +35,14 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.handle_fetch_files(client_id, payload)
                 elif message_type == "SEND_CHAT_MESSAGE":
                     await manager.handle_chat_message(client_id, payload)
+                elif message_type == "ADD_REPOSITORY":
+                    await manager.handle_add_repository(client_id, payload)
+                elif message_type == "UPDATE_REPOSITORY":
+                    await manager.handle_update_repository(client_id, payload)
+                elif message_type == "DELETE_REPOSITORY":
+                    await manager.handle_delete_repository(client_id, payload)
+                elif message_type == "SELECT_REPOSITORY":
+                    await manager.handle_select_repository(client_id, payload)
                 else:
                     logger.warning(f"Unknown message type: {message_type}")
                     

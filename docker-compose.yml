@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  # MongoDB service
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - app-network
+
   # Backend service
   backend:
     build:
@@ -11,9 +24,12 @@ services:
     environment:
       - PORT=8081
       - HOST=0.0.0.0
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017
     volumes:
       - ./backend:/app
       - /app/venv
+    depends_on:
+      - mongodb
     networks:
       - app-network
 
@@ -32,3 +48,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  mongodb_data:

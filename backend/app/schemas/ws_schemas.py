@@ -2,8 +2,9 @@
 Pydantic schemas for the application
 """
 from enum import Enum
+import uuid
 from typing import List, Optional, Union, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class MessageSender(str, Enum):
@@ -34,21 +35,53 @@ class FileNode(BaseModel):
     children: Optional[List['FileNode']] = None
 
 
+class Repository(BaseModel):
+    """Schema for a GitHub repository"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    url: str
+    host: str = "github.com"  # Default to github.com, can be a GH Enterprise domain
+    owner: str
+    repo: str
+    branch: str = "main"
+    token: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "name": "My React App",
+                "url": "https://github.com/user/repo",
+                "host": "github.com",
+                "owner": "user",
+                "repo": "repo",
+                "branch": "main",
+                "token": "ghp_xxxxxxxxxxxx"
+            }
+        }
+
+
+class RepositoryResponse(BaseModel):
+    """Schema for repository response (no token)"""
+    id: str
+    name: str
+    url: str
+    host: str
+    owner: str
+    repo: str
+    branch: str
+    created_at: int
+
+
 # Client -> Server Message Types
 class ConfigData(BaseModel):
     """Configuration data from client"""
-    githubToken: str
     geminiToken: str
-    githubRepo: str
-    githubBranch: str
-    selectedFiles: List[str]
+    repositories: List[Repository] = []
 
 
 class FetchFilesPayload(BaseModel):
     """Payload for fetching files from GitHub"""
-    repo: str
-    branch: str
-    githubToken: str
+    repository_id: str
 
 
 class SendChatMessagePayload(BaseModel):
@@ -56,11 +89,34 @@ class SendChatMessagePayload(BaseModel):
     text: str
 
 
+class AddRepositoryPayload(BaseModel):
+    """Payload for adding a repository"""
+    repository: Repository
+
+
+class UpdateRepositoryPayload(BaseModel):
+    """Payload for updating repository details"""
+    repository_id: str
+    repository: Repository
+
+
+class DeleteRepositoryPayload(BaseModel):
+    """Payload for deleting a repository"""
+    repository_id: str
+
+
+class SelectRepositoryPayload(BaseModel):
+    """Payload for selecting a repository"""
+    repository_id: str
+
+
 # Client -> Server Message Union Type
 class ClientMessage(BaseModel):
     """Base model for client messages"""
     type: str
-    payload: Union[ConfigData, FetchFilesPayload, SendChatMessagePayload, Dict[str, Any]]
+    payload: Union[ConfigData, FetchFilesPayload, SendChatMessagePayload, 
+                  AddRepositoryPayload, UpdateRepositoryPayload, 
+                  DeleteRepositoryPayload, SelectRepositoryPayload, Dict[str, Any]]
 
 
 # Server -> Client Message Types
@@ -78,12 +134,30 @@ class ConfigErrorMessage(BaseModel):
 class FileTreeDataMessage(BaseModel):
     """File tree data message"""
     type: str = "FILE_TREE_DATA"
-    payload: Dict[str, List[FileNode]]
+    payload: Dict[str, Any]
 
 
 class FileTreeErrorMessage(BaseModel):
     """File tree error message"""
     type: str = "FILE_TREE_ERROR"
+    payload: Dict[str, str]
+
+
+class RepositoriesListMessage(BaseModel):
+    """Repositories list message"""
+    type: str = "REPOSITORIES_LIST"
+    payload: Dict[str, List[RepositoryResponse]]
+
+
+class RepositoryActionSuccessMessage(BaseModel):
+    """Repository action success message"""
+    type: str = "REPOSITORY_ACTION_SUCCESS"
+    payload: Dict[str, Any]
+
+
+class RepositoryActionErrorMessage(BaseModel):
+    """Repository action error message"""
+    type: str = "REPOSITORY_ACTION_ERROR"
     payload: Dict[str, str]
 
 

@@ -12,6 +12,7 @@ interface ChatInterfaceProps {
   onSendMessage: (text: string) => void;
   isSendingMessage: boolean;
   onResetConfiguration: () => void;
+  repositoryName?: string;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -19,6 +20,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   isSendingMessage,
   onResetConfiguration,
+  repositoryName,
 }) => {
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -49,9 +51,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="flex flex-col h-full max-h-screen bg-gray-800">
       <header className="bg-gray-700 p-4 shadow-md flex justify-between items-center">
-        <h1 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
-          AI Agent Chat
-        </h1>
+        <div>
+          <h1 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
+            AI Agent Chat
+          </h1>
+          {repositoryName && (
+            <p className="text-sm text-gray-400 mt-1">Repository: {repositoryName}</p>
+          )}
+        </div>
         <Button onClick={onResetConfiguration} variant="danger_ghost" size="sm">
           Reset Configuration
         </Button>
