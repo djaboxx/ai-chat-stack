@@ -94,6 +94,7 @@ class MongoDB:
     async def add_repository(self, client_id: str, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """Add or update a repository for a client"""
         try:
+            logger.info(f"Adding repository for client {client_id}: {repo_data.get('name')}")
             repo = {
                 "id": repo_data.get("id", str(uuid.uuid4())),
                 "name": repo_data["name"],
@@ -108,11 +109,15 @@ class MongoDB:
             }
             
             # Use upsert to add or update
-            await mongodb.db.repositories.update_one(
+            logger.info(f"MongoDB URI: {mongodb.client.address}")
+            logger.info(f"MongoDB Database: {mongodb.db.name}")
+            logger.info(f"Upserting repository {repo['name']} for client {client_id}")
+            result = await mongodb.db.repositories.update_one(
                 {"client_id": client_id, "name": repo["name"]},
                 {"$set": repo},
                 upsert=True
             )
+            logger.info(f"Repository upsert result: matched={result.matched_count}, modified={result.modified_count}, upserted={result.upserted_id is not None}")
             
             # Remove token before returning
             repo_response = repo.copy()

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { ConfigurationScreen } from './components/ConfigurationScreen';
 import { ChatInterface } from './components/ChatInterface';
@@ -20,6 +20,7 @@ const App: React.FC = () => {
   const [repositories, setRepositories] = useState<RepositoryResponse[]>([]);
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<string | null>(null);
   const [selectedRepository, setSelectedRepository] = useState<RepositoryResponse | null>(null);
+  const [activeSection, setActiveSection] = useState<string>('gemini');
 
   const { sendMessage, lastJsonMessage, readyState } = useWebSocket(WEBSOCKET_URL, {
     shouldReconnect: (_closeEvent) => true,
@@ -140,10 +141,15 @@ const App: React.FC = () => {
 
   // Repository management handlers
   const handleAddRepository = useCallback((repo: Repository) => {
+    console.log("handleAddRepository called with:", { ...repo, token: "REDACTED" });
     const wsMessage: ClientToServerMessage = { 
       type: 'ADD_REPOSITORY', 
       payload: { repository: repo } 
     };
+    console.log("Sending WebSocket message:", JSON.stringify({ 
+      type: wsMessage.type, 
+      payload: { repository: { ...wsMessage.payload.repository, token: "REDACTED" } } 
+    }));
     sendMessage(JSON.stringify(wsMessage));
     setSystemMessage('Adding repository...');
   }, [sendMessage]);
@@ -193,33 +199,72 @@ const App: React.FC = () => {
     );
   }
 
+  // Only allow chat if Gemini key is set
+  const canChat = !!configData?.geminiToken;
+
   return (
-    <div className="flex flex-col h-screen max-h-screen bg-gray-800 text-gray-100">
-      {(systemMessage || (connectionStatusMessage && readyState !== ReadyState.OPEN)) && (
-        <div className={`p-3 text-center text-sm ${fileTreeError || readyState === ReadyState.CLOSED ? 'bg-red-600' : 'bg-blue-600'} text-white transition-opacity duration-300`}>
-          {systemMessage || connectionStatusMessage}
+    <div className="flex h-screen bg-gray-800 text-gray-100">
+      {/* Left: Configuration panel */}
+      <div className="w-full max-w-xs border-r border-gray-700 bg-gray-900 flex flex-col">
+        {/* Simple navigation header */}
+        <div className="bg-gray-950 p-4 border-b border-gray-700">
+          <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-4">
+            AI Chat Stack
+          </h2>
+          
+          <div className="mb-4">
+            <h3 className="text-xs uppercase tracking-wider text-gray-500 mb-2 font-semibold">
+              Configuration
+            </h3>
+            <ul className="space-y-1">
+              {[
+                { id: 'gemini', title: 'Gemini API Key', icon: '🔑' },
+                { id: 'repositories', title: 'Repositories', icon: '📁' },
+                { id: 'filetree', title: 'File Tree', icon: '🌲' }
+              ].map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setActiveSection(item.id)}
+                    className={`flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      activeSection === item.id
+                        ? 'bg-gray-800 text-purple-400 font-semibold'
+                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                    }`}
+                  >
+                    <span role="img" aria-label={item.title} className="mr-2">
+                      {item.icon}
+                    </span>
+                    {item.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
-      )}
-      {!isConfigured ? (
-        <ConfigurationScreen
-          onConfigure={handleConfigure}
-          fetchFileTree={handleFetchFileTree}
-          addRepository={handleAddRepository}
-          updateRepository={handleUpdateRepository}
-          deleteRepository={handleDeleteRepository}
-          selectRepository={handleSelectRepository}
-          repositories={repositories}
-          selectedRepositoryId={selectedRepositoryId}
-          fileTreeData={fileTree}
-          isFileTreeLoading={isFileTreeLoading}
-          fileTreeError={fileTreeError}
-          isConnecting={readyState === ReadyState.CONNECTING || readyState === ReadyState.CLOSED}
-        />
-      ) : (
+        <div className="flex-1 overflow-y-auto">
+          <ConfigurationScreen
+            onConfigure={handleConfigure}
+            fetchFileTree={handleFetchFileTree}
+            addRepository={handleAddRepository}
+            updateRepository={handleUpdateRepository}
+            deleteRepository={handleDeleteRepository}
+            selectRepository={handleSelectRepository}
+            repositories={repositories}
+            selectedRepositoryId={selectedRepositoryId}
+            fileTreeData={fileTree}
+            isFileTreeLoading={isFileTreeLoading}
+            fileTreeError={fileTreeError}
+            isConnecting={readyState === ReadyState.CONNECTING || readyState === ReadyState.CLOSED}
+            activeSection={activeSection}
+          />
+        </div>
+      </div>
+      {/* Right: Chat panel */}
+      <div className="flex-1 flex flex-col relative">
         <ChatInterface
           messages={chatMessages}
           onSendMessage={handleSendChatMessage}
-          isSendingMessage={readyState !== ReadyState.OPEN}
+          isSendingMessage={readyState !== ReadyState.OPEN || !canChat}
           onResetConfiguration={() => {
             setIsConfigured(false);
             setConfigData(null);
@@ -231,7 +276,14 @@ const App: React.FC = () => {
           }}
           repositoryName={selectedRepository?.name}
         />
-      )}
+        {!canChat && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-10 pointer-events-none">
+            <div className="bg-red-600 text-white px-6 py-4 rounded shadow-lg text-lg pointer-events-auto">
+              Please enter your Gemini API Key to enable chat.
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

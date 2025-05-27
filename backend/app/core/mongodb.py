@@ -9,8 +9,12 @@ from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 logger = logging.getLogger(__name__)
 
 # Get MongoDB URI from environment variable or use a default
-MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://admin:password@localhost:27017")
+MONGODB_URI = os.environ.get("MONGODB_URI", "mongodb://admin:password@mongodb:27017")
 DB_NAME = os.environ.get("DB_NAME", "ai_chat_app")
+
+# Log the MongoDB connection details
+logger.info(f"MongoDB URI: {MONGODB_URI}")
+logger.info(f"MongoDB DB Name: {DB_NAME}")
 
 class MongoDBManager:
     """MongoDB connection manager"""

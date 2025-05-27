@@ -232,8 +232,10 @@ class ConnectionManager:
     async def handle_add_repository(self, client_id: str, payload: Dict[str, Any]) -> None:
         """Handle adding a new repository"""
         try:
+            logger.info(f"Received ADD_REPOSITORY request for client {client_id} with payload: {payload}")
             repository_data = payload.get("repository")
             if not repository_data:
+                logger.error("Repository data is missing from payload")
                 await self.send_personal_message({
                     "type": "REPOSITORY_ACTION_ERROR",
                     "payload": {"message": "Repository data is required"}
@@ -241,8 +243,10 @@ class ConnectionManager:
                 return
                 
             # Validate repository before adding
+            logger.info(f"Validating repository: {repository_data.get('name')} ({repository_data.get('url')})")
             is_valid = await GitHubService.validate_repository(repository_data)
             if not is_valid:
+                logger.error(f"Repository validation failed: {repository_data.get('name')} ({repository_data.get('url')})")
                 await self.send_personal_message({
                     "type": "REPOSITORY_ACTION_ERROR",
                     "payload": {"message": "Invalid repository or unable to access with provided token"}

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node build.js",
+    "build:vite": "vite build",
+    "build:esbuild": "node esbuild.config.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -21,7 +23,12 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.2.1",
+    "esbuild": "^0.19.12",
     "typescript": "~5.7.2",
     "vite": "^6.2.0"
+  },
+  "overrides": {
+    "rollup": "npm:@rollup/wasm-node"
   }
 }
