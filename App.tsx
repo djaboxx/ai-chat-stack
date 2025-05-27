@@ -3,6 +3,7 @@ import useWebSocket, { ReadyState } from 'react-use-websocket';
 import { ConfigurationScreen } from './components/ConfigurationScreen';
 import { ChatInterface } from './components/ChatInterface';
 import { Spinner } from './components/common/Spinner';
+import Sidebar from './components/Sidebar';
 import type { 
   ConfigData, ChatMessage, FileNode, ServerToClientMessage, 
   ClientToServerMessage, Repository, RepositoryResponse 
@@ -182,6 +183,18 @@ const App: React.FC = () => {
     setSelectedRepositoryId(id);
   }, [sendMessage]);
   
+  // Helper to parse GitHub URL into repo fields
+  const parseGithubUrl = (url: string) => {
+    try {
+      const u = new URL(url);
+      const [owner, repoWithGit] = u.pathname.replace(/^\//, '').split('/');
+      const repo = repoWithGit.replace(/\.git$/, '');
+      return { host: u.hostname, owner, repo };
+    } catch {
+      return { host: 'github.com', owner: '', repo: '' };
+    }
+  };
+
   const connectionStatusMessage = {
     [ReadyState.CONNECTING]: 'Connecting to agent...',
     [ReadyState.OPEN]: null, 
@@ -204,84 +217,53 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-800 text-gray-100">
-      {/* Left: Configuration panel */}
-      <div className="w-full max-w-xs border-r border-gray-700 bg-gray-900 flex flex-col">
-        {/* Simple navigation header */}
-        <div className="bg-gray-950 p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-4">
-            AI Chat Stack
-          </h2>
-          
-          <div className="mb-4">
-            <h3 className="text-xs uppercase tracking-wider text-gray-500 mb-2 font-semibold">
-              Configuration
-            </h3>
-            <ul className="space-y-1">
-              {[
-                { id: 'gemini', title: 'Gemini API Key', icon: '🔑' },
-                { id: 'repositories', title: 'Repositories', icon: '📁' },
-                { id: 'filetree', title: 'File Tree', icon: '🌲' }
-              ].map((item) => (
-                <li key={item.id}>
-                  <button
-                    onClick={() => setActiveSection(item.id)}
-                    className={`flex items-center w-full px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      activeSection === item.id
-                        ? 'bg-gray-800 text-purple-400 font-semibold'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                    }`}
-                  >
-                    <span role="img" aria-label={item.title} className="mr-2">
-                      {item.icon}
-                    </span>
-                    {item.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          <ConfigurationScreen
-            onConfigure={handleConfigure}
-            fetchFileTree={handleFetchFileTree}
-            addRepository={handleAddRepository}
-            updateRepository={handleUpdateRepository}
-            deleteRepository={handleDeleteRepository}
-            selectRepository={handleSelectRepository}
-            repositories={repositories}
-            selectedRepositoryId={selectedRepositoryId}
-            fileTreeData={fileTree}
-            isFileTreeLoading={isFileTreeLoading}
-            fileTreeError={fileTreeError}
-            isConnecting={readyState === ReadyState.CONNECTING || readyState === ReadyState.CLOSED}
-            activeSection={activeSection}
-          />
-        </div>
-      </div>
-      {/* Right: Chat panel */}
+      {/* Left: Sidebar navigation & configuration */}
+      <Sidebar
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        onAddRepo={(url) => {
+          const { host, owner, repo } = parseGithubUrl(url);
+          handleAddRepository({ name: repo, url, host, owner, repo, branch: 'main', token: '' });
+        }}
+      />
+
+      {/* Main content */}
       <div className="flex-1 flex flex-col relative">
-        <ChatInterface
-          messages={chatMessages}
-          onSendMessage={handleSendChatMessage}
-          isSendingMessage={readyState !== ReadyState.OPEN || !canChat}
-          onResetConfiguration={() => {
-            setIsConfigured(false);
-            setConfigData(null);
-            setChatMessages([]);
-            setFileTree(null);
-            setSelectedRepository(null);
-            setSelectedRepositoryId(null);
-            setSystemMessage("Configuration reset. Please re-configure.");
-          }}
-          repositoryName={selectedRepository?.name}
-        />
-        {!canChat && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-10 pointer-events-none">
-            <div className="bg-red-600 text-white px-6 py-4 rounded shadow-lg text-lg pointer-events-auto">
-              Please enter your Gemini API Key to enable chat.
-            </div>
+        {activeSection !== 'chat' && (
+          <div className="flex-1 overflow-y-auto">
+            <ConfigurationScreen
+              onConfigure={handleConfigure}
+              fetchFileTree={handleFetchFileTree}
+              addRepository={handleAddRepository}
+              updateRepository={handleUpdateRepository}
+              deleteRepository={handleDeleteRepository}
+              selectRepository={handleSelectRepository}
+              repositories={repositories}
+              selectedRepositoryId={selectedRepositoryId}
+              fileTreeData={fileTree}
+              isFileTreeLoading={isFileTreeLoading}
+              fileTreeError={fileTreeError}
+              isConnecting={readyState === ReadyState.CONNECTING || readyState === ReadyState.CLOSED}
+              activeSection={activeSection}
+            />
           </div>
+        )}
+        {activeSection === 'chat' && (
+          <ChatInterface
+            messages={chatMessages}
+            onSendMessage={handleSendChatMessage}
+            isSendingMessage={readyState !== ReadyState.OPEN || !canChat}
+            onResetConfiguration={() => {
+              setIsConfigured(false);
+              setConfigData(null);
+              setChatMessages([]);
+              setFileTree(null);
+              setSelectedRepository(null);
+              setSelectedRepositoryId(null);
+              setSystemMessage("Configuration reset. Please re-configure.");
+            }}
+            repositoryName={selectedRepository?.name}
+          />
         )}
       </div>
     </div>

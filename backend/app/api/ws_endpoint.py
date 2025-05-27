@@ -28,21 +28,22 @@ async def websocket_endpoint(websocket: WebSocket):
                 message_type = message.get("type", "").upper()
                 payload = message.get("payload", {})
                 
-                # Handle different message types
-                if message_type == "SUBMIT_CONFIG":
-                    await manager.handle_submit_config(client_id, payload)
-                elif message_type == "FETCH_FILES":
-                    await manager.handle_fetch_files(client_id, payload)
-                elif message_type == "SEND_CHAT_MESSAGE":
-                    await manager.handle_chat_message(client_id, payload)
-                elif message_type == "ADD_REPOSITORY":
-                    await manager.handle_add_repository(client_id, payload)
-                elif message_type == "UPDATE_REPOSITORY":
-                    await manager.handle_update_repository(client_id, payload)
-                elif message_type == "DELETE_REPOSITORY":
-                    await manager.handle_delete_repository(client_id, payload)
-                elif message_type == "SELECT_REPOSITORY":
-                    await manager.handle_select_repository(client_id, payload)
+                logger.info(f"Received message from {client_id}: {message_type}")
+                ws_router = dict(
+                    SUBMIT_CONFIG=partial(manager.handle_submit_config, client_id),
+                    FETCH_FILES=partial(manager.handle_fetch_files, client_id),
+                    SEND_CHAT_MESSAGE=partial(manager.handle_chat_message, client_id),
+                    ADD_REPOSITORY=partial(manager.handle_add_repository, client_id),
+                    UPDATE_REPOSITORY=partial(manager.handle_update_repository, client_id),
+                    DELETE_REPOSITORY=partial(manager.handle_delete_repository, client_id),
+                    SELECT_REPOSITORY=partial(manager.handle_select_repository, client_id)
+                )
+                if message_type in ws_router:
+                    await ws_router[message_type](payload)
+                elif message_type == "PING":
+                    await websocket.send_text(json.dumps({"type": "PONG"}))
+                elif message_type == "PONG":
+                    logger.info(f"Received PONG from {client_id}")
                 else:
                     logger.warning(f"Unknown message type: {message_type}")
                     

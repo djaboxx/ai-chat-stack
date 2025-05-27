@@ -246,33 +246,43 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
         </button>
         {showRepos && (
           <div id="repos-section" className="mt-4">
+            {/* Add New Repository button */}
+            {!isAddingRepo && !editingRepoId && (
+              <Button
+                variant="primary"
+                className="mb-4 w-full"
+                onClick={() => setIsAddingRepo(true)}
+              >
+                + Add New Repository
+              </Button>
+            )}
             {isAddingRepo && (
-          <div className="bg-gray-800 p-4 rounded-lg mb-4 border border-gray-500">
-            <h4 className="text-md font-medium mb-3">
-              {editingRepoId ? "Edit Repository" : "Add New Repository"}
-            </h4>
-            <form onSubmit={handleRepoSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Display Name" id="repoName" type="text" value={repoName} onChange={(e) => setRepoName(e.target.value)} placeholder="My Repository" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                <Input label="GitHub Token" id="repoToken" type="password" value={repoToken} onChange={(e) => setRepoToken(e.target.value)} placeholder={editingRepoId ? "Leave blank to keep existing" : "ghp_xxxxxxxxxxxx"} required={!editingRepoId} className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+              <div className="bg-gray-800 p-4 rounded-lg mb-4 border border-gray-500">
+                <h4 className="text-md font-medium mb-3">
+                  {editingRepoId ? "Edit Repository" : "Add New Repository"}
+                </h4>
+                <form onSubmit={handleRepoSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input label="Display Name" id="repoName" type="text" value={repoName} onChange={(e) => setRepoName(e.target.value)} placeholder="My Repository" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                    <Input label="GitHub Token" id="repoToken" type="password" value={repoToken} onChange={(e) => setRepoToken(e.target.value)} placeholder={editingRepoId ? "Leave blank to keep existing" : "ghp_xxxxxxxxxxxx"} required={!editingRepoId} className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input label="Host" id="repoHost" type="text" value={repoHost} onChange={(e) => setRepoHost(e.target.value)} placeholder="github.com" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                    <Input label="Owner" id="repoOwner" type="text" value={repoOwner} onChange={(e) => setRepoOwner(e.target.value)} placeholder="username or org" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input label="Repo Name" id="repoRepo" type="text" value={repoRepo} onChange={(e) => setRepoRepo(e.target.value)} placeholder="repo-name" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                    <Input label="Branch" id="repoBranch" type="text" value={repoBranch} onChange={(e) => setRepoBranch(e.target.value)} placeholder="main" className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                  </div>
+                  <Input label="Repository URL" id="repoUrl" type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repo" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
+                  {formError && <div className="bg-red-500 text-white p-2 rounded text-xs">{formError}</div>}
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <Button type="button" onClick={resetRepoForm} variant="danger_ghost" className="w-full">Cancel</Button>
+                    <Button type="submit" variant="primary" className="w-full">{editingRepoId ? "Update Repository" : "Add Repository"}</Button>
+                  </div>
+                </form>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Host" id="repoHost" type="text" value={repoHost} onChange={(e) => setRepoHost(e.target.value)} placeholder="github.com" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                <Input label="Owner" id="repoOwner" type="text" value={repoOwner} onChange={(e) => setRepoOwner(e.target.value)} placeholder="username or org" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Repo Name" id="repoRepo" type="text" value={repoRepo} onChange={(e) => setRepoRepo(e.target.value)} placeholder="repo-name" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                <Input label="Branch" id="repoBranch" type="text" value={repoBranch} onChange={(e) => setRepoBranch(e.target.value)} placeholder="main" className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-              </div>
-              <Input label="Repository URL" id="repoUrl" type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repo" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-              {formError && <div className="bg-red-500 text-white p-2 rounded text-xs">{formError}</div>}
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <Button type="button" onClick={resetRepoForm} variant="danger_ghost" className="w-full">Cancel</Button>
-                <Button type="submit" variant="primary" className="w-full">{editingRepoId ? "Update Repository" : "Add Repository"}</Button>
-              </div>
-            </form>
-          </div>
-        )}
+            )}
             <ul className="divide-y divide-gray-700">
               {repositories.length === 0 && <li className="text-gray-400 text-sm py-2">No repositories added.</li>}
               {repositories.map(repo => (
