@@ -1,0 +1,142 @@
+/* Markdown styles for the chat interface */
+
+.markdown-content {
+  color: inherit;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+/* Basic element styling */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-content h1 {
+  font-size: 1.5em;
+}
+
+.markdown-content h2 {
+  font-size: 1.25em;
+}
+
+.markdown-content h3 {
+  font-size: 1.125em;
+}
+
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-size: 1em;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+/* List styling */
+.markdown-content ul,
+.markdown-content ol {
+  margin-top: 0.5em;
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-content li > ul,
+.markdown-content li > ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.5em;
+}
+
+/* Link styling */
+.markdown-content a {
+  color: #60a5fa;
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}
+
+/* Code styling */
+.markdown-content code {
+  font-family: 'Fira Code', monospace, Consolas, 'Courier New', monospace;
+  font-size: 0.9em;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+}
+
+.markdown-content pre {
+  margin: 1em 0;
+  padding: 1em;
+  overflow-x: auto;
+  border-radius: 6px;
+}
+
+/* Multiline code block */
+.markdown-content pre code {
+  padding: 0;
+  font-size: 0.85em;
+  line-height: 1.6;
+  display: block;
+  overflow-x: auto;
+}
+
+/* Table styling */
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.markdown-content table th,
+.markdown-content table td {
+  border: 1px solid #4a5568;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.markdown-content table th {
+  background-color: #2d3748;
+  font-weight: 600;
+}
+
+.markdown-content table tr:nth-child(even) {
+  background-color: #2d3748;
+}
+
+/* Blockquote styling */
+.markdown-content blockquote {
+  padding: 0.5em 1em;
+  margin: 1em 0;
+  border-left: 4px solid #60a5fa;
+  background-color: rgba(96, 165, 250, 0.1);
+  color: inherit;
+}
+
+/* Horizontal rule */
+.markdown-content hr {
+  height: 1px;
+  border: none;
+  background-color: #4a5568;
+  margin: 1.5em 0;
+}

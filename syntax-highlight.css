@@ -1,0 +1,38 @@
+/* Importing highlight.js themes */
+@import 'highlight.js/styles/github-dark.css';
+
+/* Custom styles for code blocks */
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1em;
+  border-radius: 5px;
+  font-size: 0.85em;
+  line-height: 1.5;
+}
+
+code.hljs {
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Code language badge */
+.code-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.25rem 0.5rem;
+  color: #9ca3af;
+  background-color: #374151;
+  border-top-left-radius: 0.25rem;
+  border-top-right-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+/* Code block wrapper */
+.code-wrapper {
+  margin: 1rem 0;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}

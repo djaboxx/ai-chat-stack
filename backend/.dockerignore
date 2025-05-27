@@ -1,0 +1,18 @@
+# Python virtual environment
+venv/
+**/__pycache__/
+**/*.py[cod]
+
+# Environment variables
+.env
+
+# Development and test files
+tests/
+
+# Git files
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+.dockerignore

@@ -1,0 +1,5 @@
+{
+  "name": "AI Code Agent Chat",
+  "description": "A web application that allows users to configure an AI agent with GitHub repository context and chat with it via a WebSocket connection.",
+  "requestFramePermissions": []
+}
