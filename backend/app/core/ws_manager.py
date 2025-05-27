@@ -55,17 +55,6 @@ class ConnectionManager:
             # Send success response
             await self.send_personal_message({"type": "CONFIG_SUCCESS"}, client_id)
             
-            # Send a welcome message
-            system_msg = db.add_message(
-                client_id=client_id,
-                sender=MessageSender.SYSTEM,
-                text="Configuration successful. You can now chat with the agent."
-            )
-            await self.send_personal_message({
-                "type": "NEW_CHAT_MESSAGE",
-                "payload": system_msg
-            }, client_id)
-            
         except Exception as e:
             logger.error(f"Error in handle_submit_config: {e}")
             await self.send_personal_message({
