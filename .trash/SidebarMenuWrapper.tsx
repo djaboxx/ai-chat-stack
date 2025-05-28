@@ -1,3 +1,5 @@
+// Moved to trash on 2025-05-27. No longer used.
+// ...original file content...
 import React from 'react';
 // @ts-ignore
 import SidebarMenu from 'react-sidebar-menu';

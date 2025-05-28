@@ -48,6 +48,10 @@ class MongoDBManager:
         await self.db.messages.create_index("client_id")
         # Repositories index
         await self.db.repositories.create_index([("client_id", 1), ("name", 1)], unique=True)
+        # Issues index
+        await self.db.issues.create_index([("client_id", 1), ("repository_id", 1), ("number", 1)], unique=True)
+        # Pull requests index
+        await self.db.pull_requests.create_index([("client_id", 1), ("repository_id", 1), ("number", 1)], unique=True)
     
     async def close(self):
         """Close MongoDB connection"""

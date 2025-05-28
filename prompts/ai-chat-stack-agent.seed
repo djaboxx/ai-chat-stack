@@ -1,0 +1,11 @@
+# Project Prompt: ai-chat-stack-agent
+## Agent 
+We need to create a pydantic AI Agent that uses tools
+### Please look at the following:
+https://ai.pydantic.dev/models/gemini/#configuration
+https://ai.pydantic.dev/agents/
+https://ai.pydantic.dev/tools/
+https://ai.pydantic.dev/agents/#system-prompts
+https://ai.pydantic.dev/mcp/server/
+Please design a class that would represent best practices in an easy to use and understand configuration
+

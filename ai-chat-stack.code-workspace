@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../terraform-prompt-template"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../gcode"
+		}
+	],
+	"settings": {}
+}

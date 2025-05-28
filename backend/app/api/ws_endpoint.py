@@ -5,7 +5,7 @@ import json
 import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..core.ws_manager import manager
-
+from functools import partial
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,16 @@ async def websocket_endpoint(websocket: WebSocket):
                     ADD_REPOSITORY=partial(manager.handle_add_repository, client_id),
                     UPDATE_REPOSITORY=partial(manager.handle_update_repository, client_id),
                     DELETE_REPOSITORY=partial(manager.handle_delete_repository, client_id),
-                    SELECT_REPOSITORY=partial(manager.handle_select_repository, client_id)
+                    SELECT_REPOSITORY=partial(manager.handle_select_repository, client_id),
+                    GET_ISSUES=partial(manager.handle_get_issues, client_id),
+                    GET_ASSIGNED_ISSUES=partial(manager.handle_get_assigned_issues, client_id),
+                    CREATE_ISSUE=partial(manager.handle_create_issue, client_id),
+                    GET_BRANCHES=partial(manager.handle_get_branches, client_id),
+                    CREATE_BRANCH=partial(manager.handle_create_branch, client_id),
+                    PUSH_FILE=partial(manager.handle_push_file, client_id),
+                    PUSH_FILES=partial(manager.handle_push_files, client_id),
+                    CREATE_PULL_REQUEST=partial(manager.handle_create_pull_request, client_id),
+                    GET_PULL_REQUESTS=partial(manager.handle_get_pull_requests, client_id)
                 )
                 if message_type in ws_router:
                     await ws_router[message_type](payload)

@@ -8,12 +8,19 @@ from typing import Dict, List, Any, Optional
 import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 from ..models.models import db
+from ..models.github_model import github_model
 from ..core.mongodb import mongodb
 from ..schemas.ws_schemas import (
     ChatMessage, MessageSender, FileNode, Repository, 
-    RepositoryResponse
-)
-from ..services.github_service import GitHubService
+    RepositoryRe            # Retrieve repository from database
+            repository = await github_model.get_repository(client_id, repository_id)
+            
+            if not repository:
+                await self.send_personal_message({
+                    "type": "REPOSITORY_ACTION_ERROR",
+                    "payload": {"message": "Repository not found"}
+                }, client_id)
+                returnfrom ..services.github_service import GitHubService
 from ..services.ai_service import AIAgentService
 
 logger = logging.getLogger(__name__)
@@ -64,10 +71,10 @@ class ConnectionManager:
             repositories = payload.get("repositories", [])
             if repositories:
                 for repo_data in repositories:
-                    await db.add_repository(client_id, repo_data)
+                    await github_model.add_repository(client_id, repo_data)
                 
                 # Get all repositories and send them back
-                repos = await db.get_repositories(client_id)
+                repos = await github_model.get_repositories(client_id)
                 await self.send_personal_message({
                     "type": "REPOSITORIES_LIST",
                     "payload": {"repositories": repos}
@@ -79,7 +86,7 @@ class ConnectionManager:
                     self.selected_repositories[client_id] = first_repo["id"]
                     
                     # Fetch file tree for the first repository
-                    repo_details = await db.get_repository(client_id, first_repo["id"])
+                    repo_details = await github_model.get_repository(client_id, first_repo["id"])
                     if repo_details:
                         await self.handle_fetch_files(client_id, {"repository_id": first_repo["id"]})
             
@@ -113,7 +120,7 @@ class ConnectionManager:
                 return
             
             # Retrieve repository details from database
-            repository = await db.get_repository(client_id, repository_id)
+            repository = await github_model.get_repository(client_id, repository_id)
             
             if not repository:
                 await self.send_personal_message({
@@ -126,7 +133,7 @@ class ConnectionManager:
             self.selected_repositories[client_id] = repository_id
                 
             # Fetch the file tree using repository details
-            file_tree = await GitHubService.fetch_file_tree(repository)
+            file_tree = await github_model.fetch_file_tree(repository)
             
             # Send the file tree to the client along with repository info
             await self.send_personal_message({
@@ -184,7 +191,7 @@ class ConnectionManager:
             # Add selected repository information to the context if available
             repository_id = self.selected_repositories.get(client_id)
             if repository_id:
-                repository = await db.get_repository(client_id, repository_id)
+                repository = await github_model.get_repository(client_id, repository_id)
                 if repository:
                     config["selected_repository"] = repository
             
@@ -254,8 +261,9 @@ class ConnectionManager:
                 return
             
             # Add repository to database
-            repo = await db.add_repository(client_id, repository_data)
-            
+            repo = await github_model.add_repository(client_id, repository_data)
+            logger.info(f"Repository added successfully: {repo.get('name')} ({repo.get('url')})")
+            logger.debug(f"Repository data: {repo}")
             # Send success response
             await self.send_personal_message({
                 "type": "REPOSITORY_ACTION_SUCCESS",
@@ -263,7 +271,7 @@ class ConnectionManager:
             }, client_id)
             
             # Get all repositories and send updated list
-            repos = await db.get_repositories(client_id)
+            repos = await github_model.get_repositories(client_id)
             await self.send_personal_message({
                 "type": "REPOSITORIES_LIST",
                 "payload": {"repositories": repos}
@@ -307,7 +315,7 @@ class ConnectionManager:
             repository_data["id"] = repository_id
             
             # Update repository in database
-            repo = await db.add_repository(client_id, repository_data)
+            repo = await github_model.add_repository(client_id, repository_data)
             
             # Send success response
             await self.send_personal_message({
@@ -316,7 +324,7 @@ class ConnectionManager:
             }, client_id)
             
             # Get all repositories and send updated list
-            repos = await db.get_repositories(client_id)
+            repos = await github_model.get_repositories(client_id)
             await self.send_personal_message({
                 "type": "REPOSITORIES_LIST",
                 "payload": {"repositories": repos}
@@ -346,7 +354,7 @@ class ConnectionManager:
                 return
             
             # Delete repository from database
-            success = await db.delete_repository(client_id, repository_id)
+            success = await github_model.delete_repository(client_id, repository_id)
             
             if not success:
                 await self.send_personal_message({
@@ -362,7 +370,7 @@ class ConnectionManager:
             }, client_id)
             
             # Get all repositories and send updated list
-            repos = await db.get_repositories(client_id)
+            repos = await github_model.get_repositories(client_id)
             await self.send_personal_message({
                 "type": "REPOSITORIES_LIST",
                 "payload": {"repositories": repos}
@@ -430,6 +438,322 @@ class ConnectionManager:
                 "type": "REPOSITORY_ACTION_ERROR",
                 "payload": {"message": str(e)}
             }, client_id)
-
+    
+    async def handle_get_issues(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle getting issues from a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            state = payload.get("state", "open")
+            
+            if not repository_id:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID is required"}
+                }, client_id)
+                return
+            
+            # Fetch issues
+            issues = await GitHubService.get_issues(client_id, repository_id, state)
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_ISSUES_LIST",
+                "payload": {"issues": issues, "repository_id": repository_id}
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_get_issues: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_get_assigned_issues(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle getting issues assigned to a user"""
+        try:
+            username = payload.get("username")
+            
+            if not username:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Username is required"}
+                }, client_id)
+                return
+            
+            # Fetch assigned issues
+            issues = await GitHubService.get_assigned_issues(client_id, username)
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_ISSUES_LIST",
+                "payload": {"issues": issues, "assignee": username}
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_get_assigned_issues: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_create_issue(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle creating an issue in a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            title = payload.get("title")
+            body = payload.get("body")
+            assignees = payload.get("assignees")
+            labels = payload.get("labels")
+            
+            if not repository_id or not title:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID and title are required"}
+                }, client_id)
+                return
+            
+            # Create issue
+            issue = await GitHubService.create_issue(
+                client_id, repository_id, title, body or "", assignees, labels
+            )
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_ISSUE_ACTION_SUCCESS",
+                "payload": {
+                    "issue": issue,
+                    "repository_id": repository_id,
+                    "action": "create"
+                }
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_create_issue: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_get_branches(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle getting branches from a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            
+            if not repository_id:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID is required"}
+                }, client_id)
+                return
+            
+            # Fetch branches
+            branches = await GitHubService.get_branches(client_id, repository_id)
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_BRANCHES_LIST",
+                "payload": {"branches": branches, "repository_id": repository_id}
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_get_branches: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_create_branch(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle creating a branch in a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            branch_name = payload.get("branch_name")
+            base_branch = payload.get("base_branch")
+            
+            if not repository_id or not branch_name:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID and branch name are required"}
+                }, client_id)
+                return
+            
+            # Create branch
+            branch = await GitHubService.create_branch(
+                client_id, repository_id, branch_name, base_branch
+            )
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_BRANCH_ACTION_SUCCESS",
+                "payload": {
+                    "branch": branch,
+                    "repository_id": repository_id,
+                    "action": "create"
+                }
+            }, client_id)
+            
+            # Update branches list
+            branches = await GitHubService.get_branches(client_id, repository_id)
+            await self.send_personal_message({
+                "type": "GITHUB_BRANCHES_LIST",
+                "payload": {"branches": branches, "repository_id": repository_id}
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_create_branch: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_push_file(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle pushing a file to a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            file_path = payload.get("file_path")
+            content = payload.get("content")
+            commit_message = payload.get("commit_message")
+            branch = payload.get("branch")
+            
+            if not repository_id or not file_path or not content or not commit_message:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID, file path, content, and commit message are required"}
+                }, client_id)
+                return
+            
+            # Push file
+            result = await GitHubService.push_file(
+                client_id, repository_id, file_path, content, commit_message, branch
+            )
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_FILE_ACTION_SUCCESS",
+                "payload": {
+                    "result": result,
+                    "repository_id": repository_id,
+                    "action": "push"
+                }
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_push_file: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_push_files(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle pushing multiple files to a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            files = payload.get("files")
+            commit_message = payload.get("commit_message")
+            branch = payload.get("branch")
+            
+            if not repository_id or not files or not commit_message:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID, files, and commit message are required"}
+                }, client_id)
+                return
+            
+            # Prepare files for the API
+            file_list = []
+            for file in files:
+                file_list.append({
+                    "path": file["path"],
+                    "content": file["content"]
+                })
+            
+            # Push files
+            result = await GitHubService.push_files(
+                client_id, repository_id, file_list, commit_message, branch
+            )
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_FILE_ACTION_SUCCESS",
+                "payload": {
+                    "result": result,
+                    "repository_id": repository_id,
+                    "action": "push_multiple"
+                }
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_push_files: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_create_pull_request(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle creating a pull request in a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            title = payload.get("title")
+            body = payload.get("body")
+            head_branch = payload.get("head_branch")
+            base_branch = payload.get("base_branch")
+            
+            if not repository_id or not title or not head_branch or not base_branch:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID, title, head branch, and base branch are required"}
+                }, client_id)
+                return
+            
+            # Create pull request
+            pull_request = await GitHubService.create_pull_request(
+                client_id, repository_id, title, body or "", head_branch, base_branch
+            )
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_PULL_REQUEST_ACTION_SUCCESS",
+                "payload": {
+                    "pull_request": pull_request,
+                    "repository_id": repository_id,
+                    "action": "create"
+                }
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_create_pull_request: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
+    async def handle_get_pull_requests(self, client_id: str, payload: Dict[str, Any]) -> None:
+        """Handle getting pull requests from a repository"""
+        try:
+            repository_id = payload.get("repository_id")
+            state = payload.get("state", "open")
+            
+            if not repository_id:
+                await self.send_personal_message({
+                    "type": "GITHUB_ACTION_ERROR",
+                    "payload": {"message": "Repository ID is required"}
+                }, client_id)
+                return
+            
+            # Fetch pull requests
+            pull_requests = await GitHubService.get_pull_requests(client_id, repository_id, state)
+            
+            # Send response
+            await self.send_personal_message({
+                "type": "GITHUB_PULL_REQUESTS_LIST",
+                "payload": {"pull_requests": pull_requests, "repository_id": repository_id}
+            }, client_id)
+        
+        except Exception as e:
+            logger.error(f"Error in handle_get_pull_requests: {e}")
+            await self.send_personal_message({
+                "type": "GITHUB_ACTION_ERROR",
+                "payload": {"message": str(e)}
+            }, client_id)
+    
 # Create a global instance of the connection manager
 manager = ConnectionManager()

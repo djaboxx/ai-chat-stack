@@ -22,6 +22,7 @@ const App: React.FC = () => {
   const [selectedRepositoryId, setSelectedRepositoryId] = useState<string | null>(null);
   const [selectedRepository, setSelectedRepository] = useState<RepositoryResponse | null>(null);
   const [activeSection, setActiveSection] = useState<string>('gemini');
+  const [isAddingRepo, setIsAddingRepo] = useState(false);
 
   const { sendMessage, lastJsonMessage, readyState } = useWebSocket(WEBSOCKET_URL, {
     shouldReconnect: (_closeEvent) => true,
@@ -221,10 +222,8 @@ const App: React.FC = () => {
       <Sidebar
         activeSection={activeSection}
         onSectionChange={setActiveSection}
-        onAddRepo={(url) => {
-          const { host, owner, repo } = parseGithubUrl(url);
-          handleAddRepository({ name: repo, url, host, owner, repo, branch: 'main', token: '' });
-        }}
+        showAddRepoForm={() => setIsAddingRepo(true)}
+        version="v1.0"
       />
 
       {/* Main content */}
@@ -245,6 +244,8 @@ const App: React.FC = () => {
               fileTreeError={fileTreeError}
               isConnecting={readyState === ReadyState.CONNECTING || readyState === ReadyState.CLOSED}
               activeSection={activeSection}
+              isAddingRepo={isAddingRepo}
+              setIsAddingRepo={setIsAddingRepo}
             />
           </div>
         )}

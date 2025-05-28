@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import type { ConfigData, Repository, RepositoryResponse, FileNode } from '../types';
-import { Input } from './common/Input';
 import { Button } from './common/Button';
 import { Spinner } from './common/Spinner';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { ChevronRightIcon } from './icons/ChevronRightIcon';
+import GitHubRepositoryForm from './forms/GitHubRepositoryForm';
+import GeminiKeyForm from './forms/GeminiKeyForm';
 
 interface ConfigurationScreenProps {
   onConfigure: (config: ConfigData) => void;
@@ -20,6 +21,8 @@ interface ConfigurationScreenProps {
   fileTreeError: string | null;
   isConnecting: boolean;
   activeSection?: string; // Added activeSection prop
+  isAddingRepo?: boolean;
+  setIsAddingRepo?: (v: boolean) => void;
 }
 
 export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
@@ -36,6 +39,8 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
   fileTreeError,
   isConnecting,
   activeSection,
+  isAddingRepo: isAddingRepoProp,
+  setIsAddingRepo: setIsAddingRepoProp,
 }) => {
   // Collapsible section state (now influenced by activeSection)
   const [showGemini, setShowGemini] = useState(activeSection === 'gemini' || activeSection === undefined);
@@ -60,51 +65,28 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
 
   // Repo management state
   const [selectedRepoId, setSelectedRepoId] = useState<string | null>(null);
-  // Repo form state
-  const [isAddingRepo, setIsAddingRepo] = useState(false);
+  // Simplified repo form state
+  const [isAddingRepoState, setIsAddingRepoState] = useState(false);
   const [editingRepoId, setEditingRepoId] = useState<string | null>(null);
-  const [repoName, setRepoName] = useState(''); // Display name
-  const [repoUrl, setRepoUrl] = useState(''); // Full URL (auto-generated but editable)
-  const [repoHost, setRepoHost] = useState('github.com');
-  const [repoOwner, setRepoOwner] = useState('');
-  const [repoRepo, setRepoRepo] = useState('');
-  const [repoBranch, setRepoBranch] = useState('main');
-  const [repoToken, setRepoToken] = useState('');
-  // Removed duplicate formError state
+  const isAddingRepo = typeof isAddingRepoProp === 'boolean' ? isAddingRepoProp : isAddingRepoState;
+  const setIsAddingRepo = setIsAddingRepoProp || setIsAddingRepoState;
 
   // Reset repo form
   const resetRepoForm = () => {
-    setRepoName('');
-    setRepoUrl('');
-    setRepoHost('github.com');
-    setRepoOwner('');
-    setRepoRepo('');
-    setRepoBranch('main');
-    setRepoToken('');
     setIsAddingRepo(false);
     setEditingRepoId(null);
     setFormError(null);
   };
 
-  // Auto-generate URL when host/owner/repo changes (unless editing URL directly)
-  useEffect(() => {
-    if (!repoHost || !repoOwner || !repoRepo) {
-      setRepoUrl('');
-      return;
-    }
-    setRepoUrl(`https://${repoHost}/${repoOwner}/${repoRepo}`);
-  }, [repoHost, repoOwner, repoRepo]);
-
   // Handle Gemini config submission
-  const handleConfigSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!geminiToken) {
+  const handleConfigSubmit = (apiKey: string) => {
+    if (!apiKey) {
       setFormError('Gemini API Token is required.');
       return;
     }
     setFormError(null);
     onConfigure({
-      geminiToken,
+      geminiToken: apiKey,
       repositories: repositories.map((repo: RepositoryResponse) => ({
         id: repo.id,
         name: repo.name,
@@ -116,6 +98,7 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
         token: '', // Not returned from server for security
       }))
     });
+    setGeminiToken(apiKey);
     setIsConfigured(true);
   };
 
@@ -125,41 +108,10 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
   };
 
   // Repo management handlers
-  // Load repository data for editing
+  // Load repository data for editing - simplified to just set the ID and show form
   const loadRepositoryForEdit = (repo: RepositoryResponse) => {
-    setRepoName(repo.name);
-    setRepoUrl(repo.url);
-    setRepoHost(repo.host);
-    setRepoOwner(repo.owner);
-    setRepoRepo(repo.repo);
-    setRepoBranch(repo.branch);
-    setRepoToken(''); // Token is not returned from server for security
     setEditingRepoId(repo.id);
     setIsAddingRepo(true);
-  };
-
-  // Handle repository form submission
-  const handleRepoSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!repoName || !repoToken || !repoOwner || !repoRepo) {
-      setFormError('Repository name, token, owner, and repo are required.');
-      return;
-    }
-    const repo: Repository = {
-      name: repoName,
-      url: repoUrl || `https://${repoHost}/${repoOwner}/${repoRepo}`,
-      host: repoHost,
-      owner: repoOwner,
-      repo: repoRepo,
-      branch: repoBranch || 'main',
-      token: repoToken,
-    };
-    if (editingRepoId) {
-      updateRepository(editingRepoId, repo);
-    } else {
-      addRepository(repo);
-    }
-    resetRepoForm();
   };
 
   const handleRemoveRepo = (id: string) => {
@@ -195,40 +147,13 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
                 <span className="ml-2">Connecting to server... Please wait.</span>
               </div>
             )}
-            {formError && (
-              <div className="bg-red-500 text-white p-3 rounded-md text-sm mb-4">
-                {formError}
-              </div>
-            )}
-            <form onSubmit={handleConfigSubmit} className="space-y-6 flex flex-col flex-1">
-              <Input
-                label="Gemini API Key"
-                id="geminiToken"
-                type="password"
-                value={geminiToken}
-                onChange={(e) => setGeminiToken(e.target.value)}
-                placeholder="Your Gemini API Key"
-                required
-                className="bg-gray-600 border-gray-500 placeholder-gray-400"
-              />
-              <Button
-                type="submit"
-                disabled={!geminiToken || isConnecting}
-                className="w-full mt-4"
-              >
-                Save Key
-              </Button>
-              {isConfigured && (
-                <Button
-                  type="button"
-                  onClick={handleRotateKey}
-                  variant="danger_ghost"
-                  className="w-full mt-2"
-                >
-                  Rotate Key
-                </Button>
-              )}
-            </form>
+            <GeminiKeyForm
+              onSubmit={handleConfigSubmit}
+              isConfigured={isConfigured}
+              isConnecting={isConnecting}
+              apiKey={geminiToken}
+              formError={formError == null ? undefined : formError}
+            />
           </div>
         )}
       </div>
@@ -257,31 +182,19 @@ export const ConfigurationScreen: React.FC<ConfigurationScreenProps> = ({
               </Button>
             )}
             {isAddingRepo && (
-              <div className="bg-gray-800 p-4 rounded-lg mb-4 border border-gray-500">
-                <h4 className="text-md font-medium mb-3">
-                  {editingRepoId ? "Edit Repository" : "Add New Repository"}
-                </h4>
-                <form onSubmit={handleRepoSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Display Name" id="repoName" type="text" value={repoName} onChange={(e) => setRepoName(e.target.value)} placeholder="My Repository" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                    <Input label="GitHub Token" id="repoToken" type="password" value={repoToken} onChange={(e) => setRepoToken(e.target.value)} placeholder={editingRepoId ? "Leave blank to keep existing" : "ghp_xxxxxxxxxxxx"} required={!editingRepoId} className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Host" id="repoHost" type="text" value={repoHost} onChange={(e) => setRepoHost(e.target.value)} placeholder="github.com" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                    <Input label="Owner" id="repoOwner" type="text" value={repoOwner} onChange={(e) => setRepoOwner(e.target.value)} placeholder="username or org" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input label="Repo Name" id="repoRepo" type="text" value={repoRepo} onChange={(e) => setRepoRepo(e.target.value)} placeholder="repo-name" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                    <Input label="Branch" id="repoBranch" type="text" value={repoBranch} onChange={(e) => setRepoBranch(e.target.value)} placeholder="main" className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                  </div>
-                  <Input label="Repository URL" id="repoUrl" type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repo" required className="bg-gray-600 border-gray-500 placeholder-gray-400" />
-                  {formError && <div className="bg-red-500 text-white p-2 rounded text-xs">{formError}</div>}
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <Button type="button" onClick={resetRepoForm} variant="danger_ghost" className="w-full">Cancel</Button>
-                    <Button type="submit" variant="primary" className="w-full">{editingRepoId ? "Update Repository" : "Add Repository"}</Button>
-                  </div>
-                </form>
-              </div>
+              <GitHubRepositoryForm
+                onSubmit={(repo: Repository) => {
+                  if (editingRepoId) {
+                    updateRepository(editingRepoId, repo);
+                  } else {
+                    addRepository(repo);
+                  }
+                  resetRepoForm();
+                }}
+                onCancel={resetRepoForm}
+                initialRepository={editingRepoId ? repositories.find(r => r.id === editingRepoId) : undefined}
+                isEditing={!!editingRepoId}
+              />
             )}
             <ul className="divide-y divide-gray-700">
               {repositories.length === 0 && <li className="text-gray-400 text-sm py-2">No repositories added.</li>}
